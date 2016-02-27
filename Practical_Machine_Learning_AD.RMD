@@ -1,0 +1,123 @@
+# Practical Machine Learning Final Project
+## Anirban Dhar
+
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to quantify how well they do it. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har
+If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+
+## Loading & Processing the Datasets
+Load the Training & Test Dataset
+
+```{r}
+library(data.table, quietly=TRUE)
+library(caret, quietly=TRUE)
+library(randomForest, quietly=TRUE)
+library(rpart, quietly=TRUE)
+library(rpart.plot, quietly=TRUE)
+
+
+dfTrain <- read.csv("pml-training.csv",na.strings = c('NA','#DIV/0!',''))
+
+dfTest <- read.csv("pml-testing.csv",na.strings = c('NA','#DIV/0!',''))
+
+```
+
+
+# Split the Training Dataset into two parts
+
+The test dataset will be split with 80% as  sample and 20% as cross validation data
+
+```{r}
+tempTrain <- createDataPartition(dfTrain$classe, p=0.6, list=FALSE)
+tempTraining <- dfTrain[tempTrain, ]
+tempTesting <- dfTrain[-tempTrain, ]
+dim(tempTraining); dim(tempTesting)
+```
+
+# Process & clean the data
+
+```{r}
+nzv <- nearZeroVar(tempTraining, saveMetrics=TRUE)
+tempTraining <- tempTraining[,nzv$nzv==FALSE]
+
+nzv<- nearZeroVar(tempTesting,saveMetrics=TRUE)
+tempTesting <- tempTesting[,nzv$nzv==FALSE]
+tempTraining <- tempTraining[c(-1)]
+trainingV3 <- tempTraining
+for(i in 1:length(tempTraining)) {
+    if( sum( is.na( tempTraining[, i] ) ) /nrow(tempTraining) >= .7) {
+        for(j in 1:length(trainingV3)) {
+            if( length( grep(names(tempTraining[i]), names(trainingV3)[j]) ) == 1)  {
+                trainingV3 <- trainingV3[ , -j]
+            }   
+        } 
+    }
+}
+tempTraining <- trainingV3
+rm(trainingV3)
+clean1 <- colnames(tempTraining)
+clean2 <- colnames(tempTraining[, -58])  
+tempTesting <- tempTesting[clean1]         
+dfTest <- dfTest[clean2]             
+
+
+dim(tempTesting)
+dim(dfTest)
+```
+## Coerce datasets into same type
+
+```{r}
+for (i in 1:length(dfTest) ) {
+    for(j in 1:length(tempTraining)) {
+        if( length( grep(names(tempTraining[i]), names(dfTest)[j]) ) == 1)  {
+            class(dfTest[j]) <- class(tempTraining[i])
+        }      
+    }      
+}
+
+dfTest <- rbind(tempTraining[2, -58], dfTest)
+dfTest <- dfTest[-1,]
+```
+
+
+# Predict using Random Forests 
+```{r}
+set.seed(2000)
+modFitRandFor <- randomForest(classe ~ ., data=tempTraining)
+plot(modFitRandFor)
+
+predictRandFor <- predict(modFitRandFor, tempTesting, type = "class")
+confMatr <- confusionMatrix(predictRandFor, tempTesting$classe)
+confMatr
+plot(confMatr$table, col = confMatr$byClass, main = paste("Confusion Matrix With Random Forest: Accuracy =", round(confMatr$overall['Accuracy'], 5)))
+```
+
+# Predict using Decision Trees 
+```{r}
+set.seed(2000)
+modFitDT <- rpart(classe ~ ., data=tempTraining, method="class")
+rpart.plot(modFitDT)
+predictionDT <- predict(modFitDT, tempTesting, type = "class")
+confMatrDT <- confusionMatrix(predictionDT, tempTesting$classe)
+confMatrDT
+plot(confMatrDT$table, col = confMatrDT$byClass, main = paste("Confusion Matrix With Decision Tree: Accuracy =", round(confMatrDT$overall['Accuracy'], 5)))
+
+```
+
+# Course Project Prediction Quiz Results
+As Random Forest model provided an accuracy of 99.89% compared to Decision Tree Model which provided an accuracy of 85.35%, using the Random Forest model for course quiz prediction
+
+```{r}
+predictCourseQuiz <- predict(modFitRandFor, dfTest, type = "class")
+predictCourseQuiz
+```
+
