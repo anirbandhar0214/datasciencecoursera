@@ -1,0 +1,69 @@
+Developing Data Products Project Presentation
+========================================================
+author: Anirban Dhar
+date: 05/08/2016
+
+Projct Presentation Overview
+========================================================
+
+This presentation is being created to prepare a reproducible pitch on Storm Data Base Explorer application created using Shiny as part of Developing Data Product Course Project. The presentation will have 3 parts:
+
+- Basic overview of the application 
+- Sample code snippet in R
+- Sample plotting code in R
+
+Storm Database Explorer Application
+========================================================
+
+Storm Database Explorer Application has been developed using Shiny. This application is based on the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. Dataset has been obtained from the Coursera site:
+
+- You can use the slider to select a date range for the application 
+
+- Check boxes can be used to select event types
+
+- The graphs are displayed by state and by year. You can draw the charts based on population impact or economic impact by selecting from the menu on the right hand side
+
+- You can also look at the data set by state
+
+Sample Data
+========================================================
+
+```{r   message = F, echo = F}
+library(data.table)
+library(rCharts)
+library(reshape2)
+
+dt <- fread('data/events.agg.csv')
+dt.agg.year <- dt[, list(Count=sum(COUNT), Injuries=sum(INJURIES), Fatalities=sum(FATALITIES)), by=list(YEAR)]
+dt
+```
+
+Sample Code to Read Data
+========================================================
+```{r}
+library(rCharts)
+library(data.table)
+library(reshape2)
+
+dataset <- fread('data/events.agg.csv')
+dataset.agg.year <- dataset[, list(Count=sum(COUNT), Injuries=sum(INJURIES), Fatalities=sum(FATALITIES)), by=list(YEAR)]
+dataset
+```
+
+
+Sample Code to Generate Plots
+========================================================
+```{r nvd3plot2} 
+
+data <- melt(dataset.agg.year[, list(YEAR=YEAR, Injuries=Injuries, Fatalities=Fatalities)], id='YEAR')
+impact2population <- nPlot(
+    value ~ YEAR, group = 'variable', data = data[order(-YEAR, variable, decreasing = T)],
+    type = 'stackedAreaChart', dom = 'populationImpact'
+)
+        
+impact2population$chart(margin = list(left = 100))
+impact2population$yAxis( axisLabel = "Affected", width = 80)
+impact2population$xAxis( axisLabel = "Year", width = 70)
+impact2population
+```
+
