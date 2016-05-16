@@ -25,7 +25,8 @@ source("helpers.R", local = TRUE)
 
 # Load Storms Dataset
 states_map <- map_data("state")
-datafile <- fread('data/events.agg.csv') %>% mutate(EVTYPE = tolower(EVTYPE))
+#datafile <- fread('data/events.agg.csv') %>% mutate(EVTYPE = tolower(EVTYPE))
+datafile <- fread('events.agg.csv') %>% mutate(EVTYPE = tolower(EVTYPE))
 eventTypes <- sort(unique(datafile$EVTYPE))
 
 
